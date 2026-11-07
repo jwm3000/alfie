@@ -1,7 +1,7 @@
 {
   "$schema":"https://schema.tauri.app/config/2",
   "productName":"Alfie",
-  "version":"0.1.0",
+  "version":"0.1.1",
   "identifier":"com.norbert.alfiewriter",
   "build":{"beforeDevCommand":"npm run dev -- --port 1420 --strictPort","devUrl":"http://127.0.0.1:1420","beforeBuildCommand":"npm run build","frontendDist":"../dist"},
   "app":{"windows":[{"title":"Alfie · A little room for big stories","width":1440,"height":940,"minWidth":760,"minHeight":600,"center":true,"dragDropEnabled":false}],"security":{"csp":"default-src 'self'; img-src 'self' asset: http://asset.localhost data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; connect-src ipc: http://ipc.localhost https://github.com https://api.github.com"}},
