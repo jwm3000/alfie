@@ -1,0 +1,17 @@
+a software for writers, it should help organize a book writing
+
+wordcounter
+
+many features important for writers, chapters sollen in eigenen dokumenten bearbeitbar sein (bestenfalls) - chapters sollen alle versionierungen haben und eine markierung für die version versionen an alten anderen basieren. graph theorie , side to side view of 2 versions.
+
+lots of cats inside
+
+.alfie file to have the changes.
+
+web-version.
+
+
+minimalistic, brownish colors. theming. 
+cozy vibes
+
+fancy fullscreen writing mode. 

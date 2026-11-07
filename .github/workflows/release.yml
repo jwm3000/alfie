@@ -1,0 +1,55 @@
+name: Signed cross-platform release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            args: ''
+          - platform: windows-latest
+            args: ''
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev patchelf
+      - run: npm ci
+      - run: cargo install tauri-cli --version '^2' --locked
+      - name: Validate release configuration
+        shell: bash
+        run: |
+          if grep -q 'REPLACE_WITH_' src-tauri/tauri.conf.json; then echo 'Set the GitHub owner and repository in src-tauri/tauri.conf.json.' >&2; exit 1; fi
+          if grep -q '__ALFIE_UPDATER_PUBLIC_KEY__' src-tauri/tauri.conf.json; then echo 'Set the updater public key in src-tauri/tauri.conf.json.' >&2; exit 1; fi
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then echo 'Add the TAURI_SIGNING_PRIVATE_KEY GitHub Actions secret.' >&2; exit 1; fi
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" ]; then echo 'Add the TAURI_SIGNING_PRIVATE_KEY_PASSWORD GitHub Actions secret.' >&2; exit 1; fi
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Alfie ${{ github.ref_name }}"
+          releaseBody: "A little room for big stories. Windows: download Alfie_*_x64-setup.exe and run it. Linux: AppImage, .deb or .rpm."
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+          includeUpdaterJson: true

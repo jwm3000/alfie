@@ -1,0 +1,10 @@
+{
+  "$schema":"https://schema.tauri.app/config/2",
+  "productName":"Alfie",
+  "version":"0.1.0",
+  "identifier":"com.norbert.alfiewriter",
+  "build":{"beforeDevCommand":"npm run dev -- --port 1420 --strictPort","devUrl":"http://127.0.0.1:1420","beforeBuildCommand":"npm run build","frontendDist":"../dist"},
+  "app":{"windows":[{"title":"Alfie · A little room for big stories","width":1440,"height":940,"minWidth":760,"minHeight":600,"center":true,"dragDropEnabled":false}],"security":{"csp":"default-src 'self'; img-src 'self' asset: http://asset.localhost data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; connect-src ipc: http://ipc.localhost https://github.com https://api.github.com"}},
+  "bundle":{"active":true,"targets":["nsis","msi","appimage","deb","rpm"],"icon":["icons/32x32.png","icons/128x128.png","icons/128x128@2x.png","icons/icon.icns","icons/icon.ico","icons/icon.png"],"createUpdaterArtifacts":true},
+  "plugins":{"updater":{"windows":{"installMode":"passive"},"pubkey":"dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY5QjkxQkM4NTU2N0NENDQKUldSRXpXZFZ5QnU1YVFuVGdkckp5NndNbWxqT1l3SU1FcDFhMWRSdk53ak96U0NReDZlRkJUSGkK","endpoints":["https://github.com/jwm3000/alfie/releases/latest/download/latest.json"]},"process":{}}
+}
