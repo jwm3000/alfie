@@ -48,7 +48,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Alfie ${{ github.ref_name }}"
-          releaseBody: "A little room for big stories. Windows: download Alfie_*_x64-setup.exe and run it. Linux: AppImage, .deb or .rpm."
+          releaseBody: "A little room for big stories.\n\n**Windows:** download `Alfie_…_x64-setup.exe` below and run it. No admin rights needed. If Windows shows *Windows protected your PC*, click **More info → Run anyway** (Alfie is not code-signed yet).\n\n**Linux:** AppImage, .deb or .rpm.\n\nAlfie checks for new versions by itself and shows an update button in the top-left corner."
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

@@ -24,60 +24,85 @@ const polyCss = (pts: V[], ox = 0, oy = 0) => (pts.length < 3 ? 'polygon(0 0, 0 
 // A long strip whose left edge lies on a line through q, extending along normal n.
 const stripTransform = (q: V, n: V, half: number) => `translate(${q.x}px, ${q.y}px) rotate(${Math.atan2(n.y, n.x)}rad) translate(0px, ${-half}px)`;
 
-function Prose({ text }: { text: string }) {
+// ---- pagination: done in JS so every engine (Chromium, WebKitGTK, WebView2) lays out identical pages ----
+type Item = { t: 'header'; ci: number } | { t: 'p'; text: string; cls: string } | { t: 'break' } | { t: 'fin' } | { t: 'empty' };
+type BookPage = { kind: 'title' } | { kind: 'toc'; from: number; to: number; heading: boolean } | { kind: 'text'; ci: number; items: Item[]; start: boolean };
+const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+function itemHtml(item: Item, chapters: Chapter[]) {
+  switch (item.t) {
+    case 'header': { const c = chapters[item.ci]; return `<header class="book-ch-head"><span>${chapterLabel(item.ci)}</span><h2>${esc(c.title)}</h2>${c.subtitle ? `<em>${esc(c.subtitle)}</em>` : ''}<i>❦</i></header>`; }
+    case 'p': return `<p class="${item.cls}">${esc(item.text).replace(/\n/g, '<br>')}</p>`;
+    case 'break': return '<div class="book-scene-break">⁂</div>';
+    case 'fin': return '<div class="book-fin"><span>— fin —</span></div>';
+    case 'empty': return '<p class="book-empty">This chapter is still waiting for its words.</p>';
+  }
+}
+const itemsHtml = (items: Item[], chapters: Chapter[]) => items.map(i => itemHtml(i, chapters)).join('');
+const tocHtml = (chapters: Chapter[], from: number, to: number, heading: boolean) => `<section class="book-contents">${heading ? '<h2>Contents</h2>' : ''}${chapters.slice(from, to).map((c, k) => `<button><span class="toc-num">${from + k + 1}</span><span class="toc-title">${esc(c.title)}</span><span class="toc-leader"></span><span class="toc-page">000</span></button>`).join('')}</section>`;
+function blocksOf(text: string): Item[] {
   const blocks = text.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
-  if (!blocks.length) return <p className="book-empty">This chapter is still waiting for its words.</p>;
-  return <>{blocks.map((block, i) => /^(\*\s*){3,}$|^-{3,}$|^#$/.test(block)
-    ? <div key={i} className="book-scene-break">⁂</div>
-    : <p key={i}>{block.split('\n').reduce<ReactNode[]>((acc, line, j) => (j ? [...acc, <br key={j}/>, line] : [line]), [])}</p>)}</>;
+  if (!blocks.length) return [{ t: 'empty' }];
+  let first = true;
+  return blocks.map(b => {
+    if (/^(\*\s*){3,}$|^-{3,}$|^#$/.test(b)) { first = true; return { t: 'break' } as Item; }
+    const item: Item = { t: 'p', text: b, cls: first ? 'first' : '' }; first = false; return item;
+  });
 }
-function FrontMatter({ project, starts, textH }: { project: Project; starts: Record<string, number>; textH: number }) {
-  return <>
-    <section className="book-title-page" style={{ height: textH }}>
-      <span className="book-ornament">✦</span><h1>{project.title}</h1>
-      {project.author && <p className="book-author">{project.author}</p>}
-      <span className="book-rule"/><small>written with alfie</small>
-    </section>
-    <section className="book-contents">
-      <h2>Contents</h2>
-      {project.chapters.map((c, i) => <button key={c.id} data-goto={starts[c.id] ?? ''}><span className="toc-num">{i + 1}</span><span className="toc-title">{c.title}</span><span className="toc-leader"/><span className="toc-page">{starts[c.id] !== undefined ? starts[c.id] + 1 : ''}</span></button>)}
-    </section>
-  </>;
-}
-function ChapterSection({ chapter, index, last }: { chapter: Chapter; index: number; last: boolean }) {
-  return <>
-    <section className="book-chapter" data-chapter={chapter.id}>
-      <header><span>{chapterLabel(index)}</span><h2>{chapter.title}</h2>{chapter.subtitle && <em>{chapter.subtitle}</em>}<i>❦</i></header>
-      <div className="book-prose"><Prose text={chapter.text}/></div>
-    </section>
-    {last && <div className="book-fin"><span>— fin —</span></div>}
-  </>;
+function paginate(box: HTMLDivElement, chapters: Chapter[], textH: number): BookPage[] {
+  const fits = (html: string) => { box.innerHTML = html; return box.scrollHeight <= textH + .5; };
+  const pages: BookPage[] = [{ kind: 'title' }];
+  // Contents pages first, so chapter page numbers are known.
+  for (let from = 0, heading = true; from < chapters.length || heading; heading = false) {
+    let to = from + 1;
+    while (to <= chapters.length && fits(tocHtml(chapters, from, to, heading))) to++;
+    to = Math.max(from + 1, to - 1); pages.push({ kind: 'toc', from, to: Math.min(to, chapters.length), heading }); from = to;
+    if (!chapters.length) break;
+  }
+  chapters.forEach((c, ci) => {
+    const queue: Item[] = [...blocksOf(c.text), ...(ci === chapters.length - 1 ? [{ t: 'fin' } as Item] : [])];
+    let items: Item[] = [{ t: 'header', ci }], start = true;
+    const flush = () => { pages.push({ kind: 'text', ci, items, start }); items = []; start = false; };
+    while (queue.length) {
+      const block = queue.shift()!;
+      if (fits(itemsHtml([...items, block], chapters))) { items.push(block); continue; }
+      if (block.t === 'p') {
+        // Split the paragraph word by word at the page end; the rest continues without indent.
+        const words = block.text.split(' ');
+        let lo = 0, hi = words.length - 1;
+        while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if (fits(itemsHtml([...items, { ...block, text: words.slice(0, mid).join(' '), cls: `${block.cls} split` }], chapters))) lo = mid; else hi = mid - 1; }
+        if (lo === 0 && !items.length) lo = 1; // a single word that never fits still has to go somewhere
+        if (lo > 0) { items.push({ ...block, text: words.slice(0, lo).join(' '), cls: `${block.cls} split` }); queue.unshift({ t: 'p', text: words.slice(lo).join(' '), cls: 'cont' }); }
+        else queue.unshift(block);
+        flush();
+      } else if (!items.length) { items.push(block); flush(); }
+      else { queue.unshift(block); flush(); }
+    }
+    if (items.length) flush();
+  });
+  box.innerHTML = '';
+  return pages;
 }
 
 type Geometry = { pageW: number; pageH: number; mx: number; my: number; colW: number; textH: number };
 type Flip = { dir: 'next' | 'prev'; from: number; to: number; auto: boolean };
-type PageInfo = { content: ReactNode; offset: number; head: string | null; folio: number | null } | null;
+type PageInfo = { node: ReactNode; head: string | null; folio: number | null } | null;
 
 // One printed page. Each chapter starts on a fresh column, so a page only needs to lay out its own chapter.
 function Page({ info, side, g }: { info: PageInfo; side: 'left' | 'right'; g: Geometry }) {
   return <div className={`book-page ${side}`} style={{ width: g.pageW, height: g.pageH }}>
     {info && <>
       <div className="book-margin" style={{ padding: `0 ${g.mx}px`, height: g.my, justifyContent: side === 'left' ? 'flex-start' : 'flex-end' }}>{info.head}</div>
-      <div className="book-clip" style={{ left: g.mx, top: g.my, width: g.colW, height: g.textH }}>
-        <div className="book-flow" style={{ width: g.colW, height: g.textH, columnCount: 1, columnGap: 2 * g.mx, transform: `translateX(${-info.offset * g.pageW}px)` }}>{info.content}</div>
-      </div>
+      <div className="book-area" style={{ left: g.mx, top: g.my, width: g.colW, height: g.textH }}>{info.node}</div>
       {info.folio && <span className="book-folio" style={{ bottom: g.my * .35 }}>{info.folio}</span>}
     </>}
   </div>;
 }
 export default function Preview({ project, onEdit }: { project: Project; onEdit: (chapterId: string) => void }) {
-  const stage = useRef<HTMLDivElement>(null), measureFlow = useRef<HTMLDivElement>(null), end = useRef<HTMLSpanElement>(null), bookRef = useRef<HTMLDivElement>(null);
+  const stage = useRef<HTMLDivElement>(null), bookRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [scale, setScale] = useState(() => { try { return Number(localStorage.getItem('alfie.bookScale')) || 1; } catch { return 1; } });
   const [spread, setSpread] = useState(0);
   const [flip, setFlip] = useState<Flip | null>(null);
-  const [pages, setPages] = useState(1);
-  const [starts, setStarts] = useState<Record<string, number>>({});
   const pending = useRef<number | null>(null);
 
   useEffect(() => { const el = stage.current; if (!el) return; const ro = new ResizeObserver(([e]) => setSize({ w: e.contentRect.width, h: e.contentRect.height })); ro.observe(el); return () => ro.disconnect(); }, []);
@@ -88,33 +113,28 @@ export default function Preview({ project, onEdit }: { project: Project; onEdit:
   const mx = Math.round(pageW * 0.12), my = Math.round(pageH * 0.095);
   const g: Geometry = { pageW, pageH, mx, my, colW: pageW - 2 * mx, textH: pageH - 2 * my };
   const font = Math.max(9, Math.round(pageW * 0.031 * scale * 10) / 10);
-  const maxSpread = Math.max(0, Math.floor((pages - 1) / 2));
 
-  const measure = () => {
-    const f = measureFlow.current; if (!f || !end.current) return;
-    const base = f.getBoundingClientRect().left;
-    const pageOf = (el: Element) => Math.max(0, Math.floor((el.getBoundingClientRect().left - base + 2) / pageW));
-    setPages(pageOf(end.current) + 1);
-    const next: Record<string, number> = {};
-    f.querySelectorAll<HTMLElement>('[data-chapter]').forEach(el => { next[el.dataset.chapter!] = pageOf(el); });
-    setStarts(prev => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
-  };
-  useLayoutEffect(() => { measure(); const raf = requestAnimationFrame(measure); return () => cancelAnimationFrame(raf); }, [project, pageW, pageH, font]);
-  useEffect(() => { void document.fonts?.ready.then(measure); }, []);
+  const measureBox = useRef<HTMLDivElement>(null);
+  const [pagesList, setPagesList] = useState<BookPage[]>([{ kind: 'title' }]);
+  useLayoutEffect(() => {
+    const box = measureBox.current; if (!box || !size.w) return;
+    const run = () => setPagesList(paginate(box, project.chapters, g.textH));
+    run(); void document.fonts?.ready.then(run);
+  }, [project, pageW, pageH, font, size.w > 0]);
+  const pages = pagesList.length;
+  const maxSpread = Math.max(0, Math.floor((pages - 1) / 2));
+  const starts = useMemo(() => { const m: Record<string, number> = {}; pagesList.forEach((p, i) => { if (p.kind === 'text' && p.start) m[project.chapters[p.ci]?.id] = i; }); return m; }, [pagesList, project]);
   useEffect(() => { if (spread > maxSpread) { setSpread(maxSpread); setFlip(null); } }, [maxSpread]);
 
   // ---- page contents ----
-  const front = useMemo(() => <FrontMatter project={project} starts={starts} textH={g.textH}/>, [project, starts, g.textH]);
-  const sections = useMemo(() => project.chapters.map((c, i) => <ChapterSection key={c.id} chapter={c} index={i} last={i === project.chapters.length - 1}/>), [project]);
-  const chapterAt = (page: number) => { let found = -1; project.chapters.forEach((c, i) => { if ((starts[c.id] ?? Infinity) <= page) found = i; }); return found; };
-  const pageInfo = (page: number): PageInfo => {
-    if (page < 0 || page >= pages) return null;
-    const i = chapterAt(page);
-    if (i < 0) return { content: front, offset: page, head: null, folio: page > 0 ? page + 1 : null };
-    const start = starts[project.chapters[i].id];
-    return { content: sections[i], offset: page - start, head: start === page ? null : page % 2 ? project.chapters[i].title : project.title, folio: page + 1 };
+  const chapterAt = (page: number) => { const p = pagesList[Math.min(page, pages - 1)]; if (p?.kind === 'text') return p.ci; return -1; };
+  const htmlCache = useMemo(() => pagesList.map(p => (p.kind === 'text' ? itemsHtml(p.items, project.chapters) : '')), [pagesList, project]);
+  const info = (page: number): PageInfo => {
+    const p = pagesList[page]; if (!p) return null;
+    if (p.kind === 'title') return { node: <section className="book-title-page"><span className="book-ornament">✦</span><h1>{project.title}</h1>{project.author && <p className="book-author">{project.author}</p>}<span className="book-rule"/><small>written with alfie</small></section>, head: null, folio: null };
+    if (p.kind === 'toc') return { node: <section className="book-contents">{p.heading && <h2>Contents</h2>}{project.chapters.slice(p.from, p.to).map((c, k) => <button key={c.id} data-goto={starts[c.id] ?? ''}><span className="toc-num">{p.from + k + 1}</span><span className="toc-title">{c.title}</span><span className="toc-leader"/><span className="toc-page">{starts[c.id] !== undefined ? starts[c.id] + 1 : ''}</span></button>)}</section>, head: null, folio: page + 1 };
+    return { node: <div className="book-text" dangerouslySetInnerHTML={{ __html: htmlCache[page] }}/>, head: p.start ? null : page % 2 ? project.chapters[p.ci]?.title ?? null : project.title, folio: page + 1 };
   };
-  const info = pageInfo;
 
   // ---- turning: a paper fold that follows the pointer in both directions, like Books on iPad ----
   // Everything is computed for a forward turn of the right page; a backward turn mirrors the whole layer.
@@ -147,7 +167,7 @@ export default function Preview({ project, onEdit }: { project: Project; onEdit:
     const { pageW: P, pageH: H } = geo.current, c = curl.current;
     const C = { x: 2 * P, y: c.cy }, M = c.m, dx = C.x - M.x, dy = C.y - M.y, L = Math.hypot(dx, dy);
     const page = [{ x: P, y: 0 }, { x: 2 * P, y: 0 }, { x: 2 * P, y: H }, { x: P, y: H }];
-    if (L < .5) { E.front.style.clipPath = 'none'; E.flap.style.clipPath = E.gloss.style.clipPath = E.under.style.clipPath = polyCss([]); E.shadow.style.filter = 'none'; return; }
+    if (L < .5) { E.front.style.clipPath = 'none'; E.flap.style.clipPath = E.gloss.style.clipPath = E.under.style.clipPath = polyCss([]); if (E.shadowA) E.shadowA.style.opacity = '0'; if (E.shadowB) E.shadowB.style.opacity = '0'; return; }
     const n = { x: dx / L, y: dy / L }, q = { x: (C.x + M.x) / 2, y: (C.y + M.y) / 2 }, half = 2 * Math.hypot(2 * P, H);
     const exposed = clipHalf(page, q, n, true);
     const reflect = (p: V) => { const k = 2 * ((p.x - q.x) * n.x + (p.y - q.y) * n.y); return { x: p.x - k * n.x, y: p.y - k * n.y }; };
@@ -165,7 +185,11 @@ export default function Preview({ project, onEdit }: { project: Project; onEdit:
     E.under.style.clipPath = polyCss(exposed, P, 0);
     E.underStrip.style.width = `${Math.min(P * .4, depth * .9 + 12)}px`; E.underStrip.style.transform = stripTransform({ x: q.x - P, y: q.y }, n, half);
     E.underStrip.style.opacity = String(strength);
-    E.shadow.style.filter = `drop-shadow(0 ${2 + 4 * strength}px ${6 + 14 * strength}px rgba(30,18,6,${(.34 * strength).toFixed(3)}))`;
+    // Cheap soft shadow (filters are slow in WebKitGTK): the flap outline, pushed outwards in two soft layers.
+    const flapPts = exposed.map(reflect), cx0 = flapPts.reduce((a, p) => a + p.x, 0) / flapPts.length, cy0 = flapPts.reduce((a, p) => a + p.y, 0) / flapPts.length;
+    const grow = (k: number) => flapPts.map(p => { const vx = p.x - cx0, vy = p.y - cy0, l = Math.hypot(vx, vy) || 1; return { x: p.x + vx / l * k, y: p.y + vy / l * k + k * .35 }; });
+    if (E.shadowA) { E.shadowA.style.clipPath = polyCss(grow(3 + 5 * strength)); E.shadowA.style.opacity = String(.16 * strength); }
+    if (E.shadowB) { E.shadowB.style.clipPath = polyCss(grow(8 + 12 * strength)); E.shadowB.style.opacity = String(.07 * strength); }
   };
 
   const tick = (now: number) => {
@@ -251,7 +275,7 @@ export default function Preview({ project, onEdit }: { project: Project; onEdit:
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.closest('input,textarea,select,[contenteditable]') || e.ctrlKey || e.metaKey || e.altKey || drag.current) return;
+      if ((e.target as HTMLElement)?.closest?.('input,textarea,select,[contenteditable]') || e.ctrlKey || e.metaKey || e.altKey || drag.current) return;
       if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); go(target() + 1); }
       if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); go(target() - 1); }
       if (e.key === 'Home') { e.preventDefault(); go(0); }
@@ -276,6 +300,7 @@ export default function Preview({ project, onEdit }: { project: Project; onEdit:
     leaf = <div className="curl-layer" style={{ transform: prev ? 'scaleX(-1)' : undefined }}>
       <div className="curl-under" ref={setEl('under')} style={{ left: pageW, width: pageW, height: pageH }}><div className="curl-under-strip" ref={setEl('underStrip')} style={{ height: 2 * half }}/></div>
       <div className="curl-front" ref={setEl('front')} style={{ left: pageW, width: pageW, height: pageH }}><div style={unmirror}><Page info={info(frontIdx)} side={prev ? 'left' : 'right'} g={g}/></div></div>
+      <div className="curl-soft" ref={setEl('shadowB')}/><div className="curl-soft" ref={setEl('shadowA')}/>
       <div className="curl-shadow" ref={setEl('shadow')}>
         <div className="curl-flap" ref={setEl('flap')} style={{ width: pageW, height: pageH }}><div style={unmirror}><Page info={info(backIdx)} side={prev ? 'right' : 'left'} g={g}/></div></div>
         <div className="curl-gloss" ref={setEl('gloss')}><div className="curl-gloss-strip" ref={setEl('glossStrip')} style={{ height: 2 * half }}/></div>
@@ -307,8 +332,8 @@ export default function Preview({ project, onEdit }: { project: Project; onEdit:
         <div className="book-half right"><Page info={info(rightIndex)} side="right" g={g}/></div>
         <div className="book-spine"/>
         {leaf}
-        {/* Invisible copy of the whole flow, used only to count pages and find chapter starts. */}
-        <div className="book-measure" aria-hidden="true"><div className="book-flow" ref={measureFlow} style={{ width: g.colW, height: g.textH, columnCount: 1, columnGap: 2 * mx }}>{front}{sections}<span ref={end} className="book-end-marker"/></div></div>
+        {/* Invisible text area used to paginate. */}
+        <div className="book-measure-box book-text" ref={measureBox} aria-hidden="true" style={{ width: g.colW }}/>
       </div>}
     </div>
     <div className="preview-footer">
