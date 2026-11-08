@@ -62,7 +62,7 @@ export default function WalkingCat() {
     <div className={`cat-sprite ${mode} ${hearts.length ? 'purring' : ''}`} style={{ transform: `scaleX(${dir})` }} onClick={pet} title="Pet Alfie">
       <svg viewBox="0 0 80 60" width={W} height={57}>
         <ellipse className="cat-ground" cx="40" cy="57.5" rx="22" ry="2" fill="#000" opacity=".12"/>
-        <g className="pose-walk">
+        <g transform="translate(0 5.5)"><g className="pose-walk">
           <path className="cat-tail" d="M21 34 C 11 33, 8 22, 13 15 C 16 11, 21 12.5, 19.5 16.5" fill="none" stroke="#1b1816" strokeWidth="4.6" strokeLinecap="round"/>
           <rect className="cat-leg leg-a" x="22" y="37" width="5" height="13" rx="2.5" fill="#100e0d"/>
           <rect className="cat-leg leg-b" x="40.5" y="37" width="5" height="13" rx="2.5" fill="#100e0d"/>
@@ -70,7 +70,7 @@ export default function WalkingCat() {
           <rect className="cat-leg leg-b" x="26.5" y="37.5" width="5" height="13" rx="2.5" fill="#1b1816"/>
           <rect className="cat-leg leg-a" x="45" y="37.5" width="5" height="13" rx="2.5" fill="#1b1816"/>
           <Head/>
-        </g>
+        </g></g>
         <g className="pose-sit">
           <path className="cat-tail-sit" d="M27 52 C 20 52, 15 47, 17 41 C 18.5 37, 22 38, 21 41" fill="none" stroke="#1b1816" strokeWidth="4.6" strokeLinecap="round"/>
           <path d="M28 54 C 24 46, 27 31, 38 30 C 49 31, 52 46, 48 54 Z" fill="#1b1816"/>
