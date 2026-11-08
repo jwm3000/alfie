@@ -70,3 +70,20 @@
 .spark-card{margin:18px 0 4px;padding:16px 16px 13px;border-radius:10px;background:linear-gradient(160deg,color-mix(in srgb,var(--accent-soft) 70%,var(--surface)),var(--surface));border:1px solid var(--line);position:relative;overflow:hidden}.spark-card:before{content:'✦';position:absolute;right:12px;top:8px;color:var(--accent);opacity:.35;font-size:20px}.spark-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}.spark-group{font-size:8px;letter-spacing:1.2px;text-transform:uppercase;color:var(--accent);background:var(--surface);border:1px solid var(--line);padding:3px 7px;border-radius:20px}.spark-card p{font:italic 15px/1.6 Georgia,serif;color:var(--heading);margin:0 0 13px;animation:spark-in .35s ease both}.spark-actions{display:flex;gap:6px}.spark-actions button{display:inline-flex;align-items:center;gap:6px;font-size:10px;padding:7px 10px;border-radius:7px}.spark-next{background:var(--accent);color:var(--paper)}.spark-next:hover{filter:brightness(1.07)}.spark-next svg{transition:transform .4s}.spark-next:hover svg{transform:rotate(180deg)}.spark-keep{color:var(--accent);border:1px solid var(--line);background:var(--surface)}.spark-keep:hover{background:var(--accent-soft)}.spark-card>small{display:block;margin-top:10px;font-size:8.5px;color:var(--muted)}
 @keyframes spark-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 .cat-toggle{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:var(--paper);background:var(--accent);box-shadow:0 6px 14px -6px color-mix(in srgb,var(--accent) 80%,transparent);animation:pop-in .35s cubic-bezier(.2,1.5,.4,1) both}.cat-toggle:hover{transform:translateY(-1px) rotate(-8deg)}
+/* ---- book page typography (JS-paginated pages) ---- */
+.book-area{position:absolute;overflow:hidden}
+.book-area,.book-text{font:var(--book-font)/1.62 Georgia,'Times New Roman',serif;color:inherit;font-variant-numeric:oldstyle-nums}
+.book-text{display:flow-root;orphans:1;widows:1}
+.book-measure-box{position:absolute;left:0;top:0;visibility:hidden;pointer-events:none;z-index:-1}
+.book-text p{margin:0;font-size:1em;line-height:1.62;color:inherit;text-align:justify;text-indent:1.4em;hyphens:manual;word-spacing:.02em}
+.book-text p.first,.book-text p.cont{text-indent:0}
+.book-text p.split{text-align-last:justify}
+.book-text p.first::first-letter{float:left;font-size:3.3em;line-height:.82;padding:.07em .09em 0 0;color:var(--accent);font-variant-numeric:lining-nums}
+.book-ch-head{text-align:center;padding-top:calc(var(--text-h) * .16);margin-bottom:2.4em}
+.book-ch-head>span{display:block;font-size:.68em;letter-spacing:.32em;text-transform:uppercase;color:var(--accent)}
+.book-ch-head>h2{font:400 1.72em/1.22 Georgia,serif;letter-spacing:-.01em;margin:.6em 0 .4em;color:inherit;text-wrap:balance}
+.book-ch-head>em{display:block;font-size:.95em;opacity:.68}
+.book-ch-head>i{display:block;font-style:normal;color:var(--accent);margin-top:.85em;font-size:1.15em}
+.book-area>.book-title-page{height:100%;padding-bottom:calc(var(--text-h) * .06)}
+.book-area>.book-contents{padding-top:calc(var(--text-h) * .12)}
+.book-text .book-contents{padding-top:calc(var(--text-h) * .12)}
