@@ -63,14 +63,19 @@ pub fn save(dir: &Path, data: &str, expected: &str) -> Result<String, Error> {
 }
 pub fn create(dir: &Path,data: &str) -> Result<(String,String), Error> { if dir.join(".alfie").exists() { return Err(Error::Format("this folder already contains an Alfie project".into())); } let revision=save(dir,data,"")?; Ok((data.to_owned(),revision)) }
 fn git(dir: &Path,args: &[&str]) -> Result<String,Error> {
-    let mut c=Command::new("git"); c.args(args).current_dir(dir).env("GIT_TERMINAL_PROMPT","0").stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    let mut c=Command::new("git");
+    // On Windows, don't flash a console window for every Git call.
+    #[cfg(windows)] { use std::os::windows::process::CommandExt; c.creation_flags(0x0800_0000); } // CREATE_NO_WINDOW
+    c.args(args).current_dir(dir).env("GIT_TERMINAL_PROMPT","0").env("GIT_CEILING_DIRECTORIES",dir.parent().unwrap_or(dir)).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
     let mut child=match c.spawn(){Ok(x)=>x,Err(e) if e.kind()==std::io::ErrorKind::NotFound=>return Err(Error::GitMissing),Err(e)=>return Err(e.into())};
     let deadline=Instant::now()+Duration::from_secs(60); while child.try_wait()?.is_none(){if Instant::now()>deadline{let _=child.kill();let _=child.wait();return Err(Error::GitTimeout)} thread::sleep(Duration::from_millis(50));}
     let output=child.wait_with_output()?;let mut text=String::from_utf8_lossy(&output.stdout).trim().to_owned();let err=String::from_utf8_lossy(&output.stderr).trim().to_owned();if !output.status.success(){return Err(Error::Git(if err.is_empty(){text}else{err}));}if !err.is_empty(){text.push_str("\n");text.push_str(&err);}Ok(text)
 }
 fn check_dir(dir: &Path)->Result<(),Error>{if !dir.join(".alfie").is_file(){return Err(Error::Format("this folder does not contain a valid .alfie project".into()));}validate(&fs::read_to_string(dir.join(".alfie"))?)?;Ok(())}
 pub fn git_action(dir:&Path, action:&str, value:&str)->Result<String,Error>{check_dir(dir)?;
- let inside=git(dir,&["rev-parse","--is-inside-work-tree"]);
+ // Each manuscript is its own repository. Never fall through to a repository further up
+ // (for example a library folder that happens to be inside Git): only `<manuscript>/.git` counts.
+ let inside:Result<(),()>=if dir.join(".git").exists(){Ok(())}else{Err(())};
  match action {
   "init"=>{if inside.is_ok(){Ok("Git is already initialized.".into())}else{git(dir,&["init","-b","main"])?;let ignore=dir.join(".gitignore");if !ignore.exists(){atomic(&ignore,b".DS_Store\nThumbs.db\n*.tmp\n")?;}Ok("Git initialized. Connect a remote to sync.".into())}},
   "remote"=>{let url=value.trim();if !(url.starts_with("https://")||url.starts_with("ssh://")||url.starts_with("git@")){return Err(Error::Format("use an HTTPS or SSH Git repository URL".into()));}if inside.is_err(){return Err(Error::Format("initialize Git first".into()));}let existing=git(dir,&["remote","get-url","origin"]);if existing.is_ok(){git(dir,&["remote","set-url","origin",url])?;}else{git(dir,&["remote","add","origin",url])?;}Ok("GitHub repository connected. Add your SSH key or credential in Git to authenticate.".into())},

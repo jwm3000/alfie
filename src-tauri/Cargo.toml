@@ -1,6 +1,6 @@
 [package]
 name = "alfie"
-version = "0.1.3"
+version = "0.1.4"
 description = "A little room for big stories"
 authors = ["Norbert"]
 edition = "2021"

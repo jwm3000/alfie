@@ -39,13 +39,13 @@ Every named version becomes a point in the **version garden**. Continue from any
 
 <p align="center"><img src="docs/screenshots/manuscripts.png" alt="The manuscript shelf with book covers" width="900"></p>
 
-Each manuscript lives in its own folder in `Documents/Alfie`, and every chapter is also written as a Markdown file. Start a new story in one click, reopen recent ones from the project menu, and press **Sync with GitHub** to commit and sync in one step. Sync only ever fast-forwards: if both copies changed, Alfie stops and explains instead of discarding anything.
+Each manuscript lives in its own folder in your library (`Documents/Alfie` by default; pick another folder under Settings → Project & sync), and every chapter is also written as a Markdown file. Start a new story in one click, reopen recent ones from the project menu, and press **Sync with GitHub** to commit and sync in one step. Git is set up per book, so a manuscript without Git simply stays local. Sync only ever fast-forwards: if both copies changed, Alfie stops and explains instead of discarding anything.
 
 ## Small comforts for long writing days
 
 - **Chapters you can rearrange**: drag them in the sidebar; collapse the menu when you want to see more of them.
 - **A little spark**: 102 writing prompts in nine moods. Keep the ones you like in your brainstorm.
-- **Brainstorm board** for sparks, characters, places and questions, linked to chapters.
+- **Brainstorm board** for sparks, characters, places and questions, linked to chapters, plus a **sketchbook** tab for maps, faces and floor plans.
 - **Writing sprints**, per-chapter notes, a word count for every chapter and the whole book.
 - **Alfie**, the resident cat: three photos in the companion panel, and a walking, purring cat at the bottom of the screen.
 - **Updates on their own**: Alfie checks GitHub for new versions and shows an *Update* button below the logo. One click saves your work, installs and restarts.
@@ -76,7 +76,7 @@ npm run desktop:build    # installers
 
 ## One honest, portable project
 
-An `.alfie` file is readable UTF-8 JSON with a versioned schema: the book, every chapter, all version branches, brainstorm cards and your goal. In the desktop app each chapter is also saved as its own Markdown file:
+An `.alfie` file is readable UTF-8 JSON with a versioned schema: the book, every chapter, all version branches, brainstorm cards, sketches and your goal. In the desktop app each chapter is also saved as its own Markdown file:
 
 ```text
 Documents/Alfie/My story/

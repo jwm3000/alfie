@@ -88,3 +88,126 @@
 .book-area>.book-contents{padding-top:calc(var(--text-h) * .12)}
 .book-text .book-contents{padding-top:calc(var(--text-h) * .12)}
 .brand img{border-radius:0;object-fit:contain;filter:drop-shadow(0 2px 3px #2a1a0a33)}.about-icon{border-radius:0;box-shadow:none;filter:drop-shadow(0 6px 14px #2a1a0a40)}
+/* ---- 0.1.4 ---- */
+:root{--ink-ink:var(--heading);--ink-accent:var(--accent);--ink-green:var(--green);--ink-red:#b4553f;--ink-blue:#4f7395}
+:root[data-theme=walnut],:root[data-theme=midnight]{--ink-red:#e5a08c;--ink-blue:#98b8d8}
+/* The sidebar scrolls as a whole when the window is short; settings stay reachable at the bottom. */
+.sidebar{overflow-x:hidden;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.chapter-list{flex:1 0 auto;overflow:visible;min-height:60px}
+.sidebar-bottom{position:sticky;bottom:0;z-index:4;background:var(--sidebar);margin-top:auto;padding-top:14px}
+.nav-wrap{z-index:3}
+.nav-collapse{z-index:3}
+.sidebar-footer{align-items:center;padding:10px 4px 12px;gap:8px}
+.gear-button{width:34px;height:34px;border-radius:9px;display:grid!important;place-items:center;color:var(--muted);transition:background .2s,color .2s}
+.gear-button svg{transition:transform .6s cubic-bezier(.3,1.4,.5,1)}
+.gear-button:hover,.gear-button.selected{background:var(--accent-soft);color:var(--accent)}
+.gear-button:hover svg{transform:rotate(90deg)}
+.footer-sync{flex:1;min-width:0;display:flex;align-items:center;gap:5px;font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.save-label>em{font-style:normal}
+/* Compact top bar */
+.compact-bar .topbar{height:38px;padding:0 16px 0 10px;gap:10px}
+.compact-bar .breadcrumb{gap:8px;font-size:10px}
+.compact-bar .breadcrumb>.icon-button{width:26px;height:26px}
+.compact-bar .save-label>em,.compact-bar .focus-button>span,.compact-bar .focus-button>kbd,.compact-bar .top-divider{display:none}
+.compact-bar .save-label>span{width:7px;height:7px}
+.compact-bar .topbar-actions{gap:12px}
+.compact-bar .focus-button{padding:5px;border-radius:6px}
+.compact-bar .focus-button:hover{background:var(--accent-soft);color:var(--accent)}
+/* Settings */
+.settings-tabs{display:inline-flex;margin-bottom:22px;flex-wrap:wrap}
+.pref-rows{display:flex;flex-direction:column;margin-top:18px}
+.pref-row{display:flex;align-items:center;gap:14px;padding:15px 0;border-top:1px solid var(--line)}
+.pref-icon{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex-shrink:0}
+.pref-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.pref-text strong{font-size:12px;font-weight:600;color:var(--heading)}
+.pref-text small{font-size:10px;color:var(--muted);line-height:1.5}
+.switch{width:40px;height:23px;border-radius:23px;background:var(--line);position:relative;flex-shrink:0;transition:background .25s}
+.switch>i{position:absolute;top:3px;left:3px;width:17px;height:17px;border-radius:50%;background:var(--surface);box-shadow:0 1px 3px #0003;transition:transform .3s cubic-bezier(.3,1.5,.5,1)}
+.switch.on{background:var(--accent)}
+.switch.on>i{transform:translateX(17px)}
+.folder-path{display:flex;align-items:center;gap:9px;padding:11px 13px;margin:16px 0;border:1px dashed var(--line);border-radius:8px;background:var(--paper);color:var(--accent);font-size:11px;min-width:0}
+.folder-path code{color:var(--heading);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.folder-path small{margin-left:auto;font-size:9px;color:var(--muted)}
+.library-folder .quiet-note{display:block;margin-top:14px}
+.sync-badge{display:inline-flex!important;align-items:center;gap:4px;width:fit-content;padding:2px 7px;border-radius:20px;background:var(--sidebar);color:var(--muted)!important;font-size:8.5px!important;margin-top:3px}
+.sync-badge.git{background:color-mix(in srgb,var(--green) 18%,transparent);color:var(--green)!important}
+/* Focus mode: the chapter rail opens only at the very right edge and never sits on top of the arrow. */
+.focus-rail{padding:14px 10px 14px 14px;gap:2px;opacity:.35;max-height:86vh;overflow:hidden;border-radius:14px 0 0 14px;transition:opacity .3s,background .3s,box-shadow .3s}
+.focus-rail button{padding:4px 0;justify-content:flex-end;width:100%}
+.focus-rail button>span{display:none}
+.focus-rail:hover,.focus-rail:focus-within{opacity:1;overflow-y:auto;padding-left:22px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:-10px 0 30px -12px #0003}
+.focus-rail:hover button>span,.focus-rail:focus-within button>span{display:block;opacity:.8;transform:none;pointer-events:auto;max-width:280px;overflow:hidden;text-overflow:ellipsis;animation:rail-label .25s cubic-bezier(.2,.9,.3,1) both}
+.focus-rail button:hover>span{opacity:1}
+@keyframes rail-label{from{opacity:0;transform:translateX(8px)}to{opacity:.8;transform:none}}
+.focus-step.next{right:34px}
+.focus-rail:hover~.focus-step.next,.focus-rail:focus-within~.focus-step.next{opacity:0!important;pointer-events:none}
+/* Version graph: choose two to compare */
+.pick-toggle{margin-right:8px;font-size:10px}
+.pick-toggle.active{color:var(--heading);background:var(--accent-soft);border-radius:6px;padding:6px 9px}
+.version-node.picking .node-circle{border-style:dashed}
+.version-node.picked .node-circle{border-style:solid;background:var(--accent);box-shadow:0 0 0 5px var(--accent-soft)}
+.version-node.picked .node-label{background:var(--surface);border-color:var(--accent);box-shadow:var(--shadow)}
+.pick-badge{position:absolute;left:-7px;top:-11px;z-index:2;width:16px;height:16px;border-radius:50%;background:var(--heading);color:var(--paper);font:700 8px/16px Arial,sans-serif;text-align:center;animation:pop-in .3s cubic-bezier(.2,1.5,.4,1) both}
+.pick-bar{border-top:1px solid var(--line);background:var(--accent-soft);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;color:var(--heading);min-height:52px;animation:pop-in .3s ease both}
+.pick-bar b{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--heading);color:var(--paper);font-size:8px;margin:0 3px}
+.pick-bar i{color:var(--muted)}
+.pick-bar .button{min-height:32px;padding:7px 13px}
+.caption-tip{margin-left:auto;opacity:.7}
+/* Brainstorm tabs & sketchbook */
+.brainstorm-tabs{display:inline-flex;margin-bottom:24px}
+.brainstorm-tabs .nav-count{margin-left:4px;font-size:9px}
+.sketchbook{display:flex;flex-direction:column;gap:12px}
+.sketch-pages{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sketch-page-tab{display:flex;align-items:center;border:1px solid var(--line);border-radius:20px;background:var(--surface);font-size:11px;color:var(--muted)}
+.sketch-page-tab>button:first-child,.sketch-page-tab>input{padding:6px 13px;border-radius:20px;font-size:11px}
+.sketch-page-tab>input{width:130px;border:0;background:transparent;color:var(--heading)}
+.sketch-page-tab.selected{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.sketch-page-remove{width:22px;height:22px;margin-right:4px;border-radius:50%;display:grid;place-items:center;color:var(--muted)}
+.sketch-page-remove:hover{background:var(--surface);color:var(--red)}
+.sketch-page-add{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;border:1px dashed var(--line);color:var(--muted)}
+.sketch-page-add:hover{color:var(--accent);border-color:var(--accent)}
+.sketch-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sketch-tool-group{display:flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--line);border-radius:9px;background:var(--sidebar)}
+.sketch-tool-group>button{width:30px;height:30px;border-radius:6px;display:grid;place-items:center;color:var(--muted)}
+.sketch-tool-group>button.selected{background:var(--surface);color:var(--accent);box-shadow:0 1px 3px #0001}
+.sketch-ink>i{width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1px #0002}
+.sketch-ink.selected>i{box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px currentColor}
+.sketch-size{border-radius:50%;background:currentColor}
+.sketch-spacer{flex:1}
+.sketch-paper{position:relative;width:min(100%,calc((100vh - 360px) * 1.6));min-width:min(100%,480px);margin:0 auto;aspect-ratio:16/10;user-select:none;-webkit-user-select:none;border:1px solid var(--line);border-radius:10px;background:var(--paper) radial-gradient(circle,color-mix(in srgb,var(--muted) 28%,transparent) 1px,transparent 1.3px) 0 0/24px 24px;box-shadow:var(--shadow);overflow:hidden}
+.sketch-paper canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:none;-webkit-user-drag:none}
+.sketch-paper canvas[aria-hidden]{pointer-events:none}
+.sketch-tool-group>button:disabled{opacity:.35}
+.sketch-hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;font:italic 14px Georgia,serif;color:var(--muted);pointer-events:none;text-align:center;max-width:70%}
+/* The cat that brings the companion back */
+.cat-toggle{position:relative;overflow:visible;color:var(--paper);transition:transform .3s cubic-bezier(.3,1.6,.5,1)}
+.cat-toggle:hover{transform:translateY(-2px)}
+.cat-toggle{padding:0;margin:0;box-sizing:border-box;flex-shrink:0}
+.cat-face{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;display:block;overflow:visible}
+.cat-face-head{transform-origin:16px 17px;transition:transform .35s cubic-bezier(.3,1.6,.5,1)}
+.cat-toggle:hover .cat-face-head{transform:rotate(-8deg)}
+.cat-face .ear{transform-box:fill-box;transition:transform .3s}
+.cat-face .ear-l{transform-origin:100% 100%;animation:ear-twitch 7s 2s infinite}
+.cat-face .ear-r{transform-origin:0 100%}
+.cat-toggle:hover .ear-l{transform:rotate(-8deg)}
+.cat-toggle:hover .ear-r{transform:rotate(8deg)}
+.cat-face .eyes{transform-box:fill-box;transform-origin:center;animation:cat-blink 4.6s infinite}
+.cat-toggle.hop{animation:cat-hop .26s cubic-bezier(.3,1.4,.5,1)}
+@keyframes cat-blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+@keyframes ear-twitch{0%,90%,100%{transform:none}92%{transform:rotate(-16deg)}94%{transform:rotate(4deg)}96%{transform:none}}
+@keyframes cat-hop{0%{transform:none}45%{transform:translateY(-6px) scale(1.06,.96)}100%{transform:translateX(10px) scale(.6);opacity:0}}
+@media (prefers-reduced-motion:reduce){.cat-face .eyes,.cat-face .ear-l{animation:none}}
+/* A caret as tall as the letters, not the line */
+.writing-page{position:relative}
+.manuscript-editor{caret-color:transparent}
+.soft-caret-mirror{position:absolute;visibility:hidden;pointer-events:none;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal;padding:0;margin:0;border:0;box-sizing:border-box}
+.soft-caret{position:absolute;left:0;top:0;width:2px;border-radius:1px;background:var(--accent);pointer-events:none;will-change:transform}
+.soft-caret.blink{animation:soft-blink 1.06s steps(1) .5s infinite}
+@keyframes soft-blink{50%{opacity:0}}
+.project-menu{z-index:auto}
+.project-menu.open{z-index:21}
+.sketch-mode{padding-top:28px;padding-bottom:24px}
+.sketch-mode .view-header{margin-bottom:16px}
+.sketch-mode .view-header h1{font-size:30px;margin-bottom:0}
+.sketch-mode .view-header p,.sketch-mode .view-header .eyebrow{display:none!important}
+.sketch-mode .brainstorm-tabs{margin-bottom:16px}

@@ -1,7 +1,11 @@
 export interface Version { id: string; parent: string | null; label: string; text: string; createdAt: string }
 export interface Chapter { id: string; title: string; subtitle: string; text: string; notes: string; status: 'Draft' | 'Revising' | 'Finished'; head: string | null; versions: Version[] }
 export interface Idea { id: string; title: string; text: string; category: 'Spark' | 'Character' | 'World' | 'Question'; chapterId: string | null }
-export interface Project { format: 'alfie'; schemaVersion: 1; id: string; title: string; author: string; goal: number; chapters: Chapter[]; ideas: Idea[]; updatedAt: string }
+// Sketchbook pages: freehand strokes in a 1600×1000 canvas. Colors are theme tokens so drawings follow light and dark mode.
+export const INKS = ['ink', 'accent', 'green', 'red', 'blue'] as const;
+export interface Stroke { ink: typeof INKS[number]; size: number; points: number[]; pressure?: number[] }
+export interface Sketch { id: string; title: string; strokes: Stroke[] }
+export interface Project { format: 'alfie'; schemaVersion: 1; id: string; title: string; author: string; goal: number; chapters: Chapter[]; ideas: Idea[]; sketches?: Sketch[]; updatedAt: string }
 export const uid = () => crypto.randomUUID();
 export const words = (text: string) => (text.match(/[\p{L}\p{N}]+(?:[’'-][\p{L}\p{N}]+)*/gu) || []).length;
 export const totalWords = (p: Project) => p.chapters.reduce((sum, c) => sum + words(c.text), 0);
@@ -53,6 +57,15 @@ export function parseProject(raw: string): Project {
   for (const idea of p.ideas) {
     if (!id(idea.id) || ideaIds.has(idea.id) || !str(idea.title) || !str(idea.text) || !['Spark', 'Character', 'World', 'Question'].includes(idea.category) || (idea.chapterId !== null && !ids.has(idea.chapterId))) throw new Error('Invalid brainstorm card.');
     ideaIds.add(idea.id);
+  }
+  if (p.sketches !== undefined) {
+    if (!Array.isArray(p.sketches)) throw new Error('Invalid sketchbook.');
+    const sketchIds = new Set<string>();
+    for (const s of p.sketches) {
+      if (!id(s.id) || sketchIds.has(s.id) || !str(s.title) || !Array.isArray(s.strokes)) throw new Error('Invalid sketchbook page.');
+      sketchIds.add(s.id);
+      for (const k of s.strokes) if (!INKS.includes(k?.ink) || !Number.isFinite(k.size) || !Array.isArray(k.points) || k.points.some((n: unknown) => !Number.isFinite(n)) || (k.pressure !== undefined && (!Array.isArray(k.pressure) || k.pressure.length * 2 !== k.points.length || k.pressure.some((n: unknown) => !Number.isFinite(n))))) throw new Error('Invalid sketch stroke.');
+    }
   }
   return p as Project;
 }
