@@ -191,21 +191,29 @@ function ThreadPopover({ editor, pos, threads, author, anchorTop, host, onClose,
     document.addEventListener('mousedown', away); return () => document.removeEventListener('mousedown', away);
   }, []);
   const send = () => { const t = draft.trim(); if (!t) return; onPost(t); setDraft(''); };
-  const grow = (el: HTMLTextAreaElement) => { el.style.height = '0px'; el.style.height = Math.min(160, el.scrollHeight) + 'px'; };
+  const grow = (el: HTMLTextAreaElement) => { el.style.height = 'auto'; const h = el.scrollHeight; el.style.height = Math.min(180, h) + 'px'; el.style.overflowY = h > 180 ? 'auto' : 'hidden'; };
+  const count = threads.reduce((n, t) => n + t.comments.length, 0);
   return createPortal(<div ref={box} className="thread-pop" role="dialog" aria-label="Comments on this paragraph" style={{ left: place?.left ?? -9999, top: place?.top ?? -9999 }} onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); editor.commands.focus(); } }}>
-    <div className="thread-head"><span>{threads.length ? 'Comments' : 'New comment'}</span><button className="icon-button" aria-label="Close comments" onClick={onClose}><X size={14}/></button></div>
-    {quote && <blockquote className="thread-quote">{quote.length > 140 ? quote.slice(0, 140) + '…' : quote}</blockquote>}
-    {threads.map(t => <div key={t.id} className="thread">
+    <header className="thread-head">
+      <span className="thread-title"><MessageSquareText size={15}/>{threads.length ? 'Comments' : 'New comment'}{count > 0 && <b>{count}</b>}</span>
+      {threads.length > 0 && <button className="thread-resolve" title="Mark as done — find it again under Resolved" onClick={() => threads.forEach(t => onResolve(t.id))}><Check size={13}/>Resolve</button>}
+      <button className="thread-close" aria-label="Close comments" title="Close (Esc)" onClick={onClose}><X size={15}/></button>
+    </header>
+    {quote && <blockquote className="thread-quote"><span>{quote}</span></blockquote>}
+    {threads.length > 0 && <div className="thread-scroll">{threads.map(t => <div key={t.id} className="thread">
       {t.comments.map(c => <div key={c.id} className="comment">
         <span className="comment-avatar">{initial(c.author)}</span>
-        <div className="comment-body"><div className="comment-meta"><strong>{c.author}</strong><small>{when(c.createdAt)}</small><button className="comment-delete" aria-label="Delete comment" title="Delete comment" onClick={() => onDelete(t.id, c.id)}><Trash2 size={12}/></button></div><p>{c.text}</p></div>
+        <div className="comment-body">
+          <div className="comment-meta"><strong>{c.author}</strong><small>{when(c.createdAt)}</small><button className="comment-delete" aria-label="Delete comment" title="Delete comment" onClick={() => onDelete(t.id, c.id)}><Trash2 size={13}/></button></div>
+          <p>{c.text}</p>
+        </div>
       </div>)}
-      <button className="thread-resolve" onClick={() => onResolve(t.id)}><Check size={13}/>Resolve</button>
-    </div>)}
+    </div>)}</div>}
     <div className="thread-compose">
-      <span className="comment-avatar">{initial(author)}</span>
-      <textarea ref={input} rows={1} value={draft} placeholder={threads.length ? 'Reply…' : 'Add a comment…'} aria-label="Comment" onChange={e => { setDraft(e.target.value); grow(e.target); }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}/>
-      <button className="thread-send" aria-label="Post comment" disabled={!draft.trim()} onClick={send}><ArrowUp size={14}/></button>
+      <div className="compose-box">
+        <textarea ref={input} rows={1} value={draft} placeholder={threads.length ? 'Reply…' : 'What do you want to remember about this line?'} aria-label="Comment" onChange={e => { setDraft(e.target.value); grow(e.target); }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}/>
+        <div className="compose-foot"><small>Enter to post · Shift+Enter for a new line</small><button className="thread-send" aria-label="Post comment" disabled={!draft.trim()} onClick={send}><ArrowUp size={15}/></button></div>
+      </div>
     </div>
   </div>, document.body);
 }
