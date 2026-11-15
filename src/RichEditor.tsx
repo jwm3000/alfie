@@ -131,6 +131,7 @@ export default function RichEditor(p: Props) {
   const onMove = (e: React.MouseEvent) => {
     if (!editor || open || !p.showComments) return;
     const view = editor.view, eb = view.dom.getBoundingClientRect();
+    if ((e.target as HTMLElement).closest('.comment-add,.comment-marker')) return;
     if (e.clientY < eb.top || e.clientY > eb.bottom) { if (hover) setHover(null); return; }
     const at = view.posAtCoords({ left: Math.min(Math.max(e.clientX, eb.left + 4), eb.right - 4), top: e.clientY });
     const b = at && blockAt(editor.state, at.pos);
@@ -138,7 +139,10 @@ export default function RichEditor(p: Props) {
     if (hover?.pos !== b.pos) setHover({ pos: b.pos, top: blockTop(b.pos) });
   };
 
-  return <div ref={host} className={`rich-host ${p.showComments ? '' : 'no-comments'}`} onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+  // Leaving the text towards the margin must not hide the button: the margin strip belongs to the hover area,
+  // and a short grace period covers quick or diagonal mouse moves.
+  const leaveTimer = useRef(0);
+  return <div ref={host} className={`rich-host ${p.showComments ? '' : 'no-comments'}`} onMouseMove={e => { clearTimeout(leaveTimer.current); onMove(e); }} onMouseLeave={() => { clearTimeout(leaveTimer.current); leaveTimer.current = window.setTimeout(() => setHover(null), 350); }}>
     <EditorContent editor={editor}/>
     <div ref={caret} className="soft-caret" aria-hidden="true" style={{ display: 'none' }}/>
     {editor && <BubbleMenu editor={editor} className="bubble" options={{ placement: 'top', offset: 8 }}>
