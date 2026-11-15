@@ -1,11 +1,15 @@
 export interface Version { id: string; parent: string | null; label: string; text: string; createdAt: string }
-export interface Chapter { id: string; title: string; subtitle: string; text: string; notes: string; status: 'Draft' | 'Revising' | 'Finished'; head: string | null; versions: Version[] }
+// A discussion attached to one paragraph (or heading / list line). `anchor` is that paragraph's text and `hint`
+// its position among the chapter's paragraphs, so the thread finds its place again after reloading.
+export interface Comment { id: string; author: string; text: string; createdAt: string }
+export interface Thread { id: string; anchor: string; hint: number; resolved: boolean; createdAt: string; comments: Comment[] }
+export interface Chapter { id: string; title: string; subtitle: string; text: string; notes: string; status: 'Draft' | 'Revising' | 'Finished'; head: string | null; versions: Version[]; threads?: Thread[] }
 export interface Idea { id: string; title: string; text: string; category: 'Spark' | 'Character' | 'World' | 'Question'; chapterId: string | null }
 // Sketchbook pages: freehand strokes in a 1600×1000 canvas. Colors are theme tokens so drawings follow light and dark mode.
 export const INKS = ['ink', 'accent', 'green', 'red', 'blue'] as const;
 export interface Stroke { ink: typeof INKS[number]; size: number; points: number[]; pressure?: number[] }
 export interface Sketch { id: string; title: string; strokes: Stroke[] }
-export interface Project { format: 'alfie'; schemaVersion: 1; id: string; title: string; author: string; goal: number; chapters: Chapter[]; ideas: Idea[]; sketches?: Sketch[]; updatedAt: string }
+export interface Project { format: 'alfie'; schemaVersion: 1; id: string; title: string; author: string; goal: number; chapters: Chapter[]; ideas: Idea[]; sketches?: Sketch[]; font?: string; updatedAt: string }
 export const uid = () => crypto.randomUUID();
 export const words = (text: string) => (text.match(/[\p{L}\p{N}]+(?:[’'-][\p{L}\p{N}]+)*/gu) || []).length;
 export const totalWords = (p: Project) => p.chapters.reduce((sum, c) => sum + words(c.text), 0);
@@ -52,12 +56,17 @@ export function parseProject(raw: string): Project {
       seen.add(v.id);
     }
     if (c.head !== null && !seen.has(c.head)) throw new Error('Invalid active chapter version.');
+    if (c.threads !== undefined) {
+      if (!Array.isArray(c.threads)) throw new Error('Invalid comments.');
+      for (const t of c.threads) if (!id(t?.id) || !str(t.anchor) || !Number.isInteger(t.hint) || typeof t.resolved !== 'boolean' || !str(t.createdAt) || !Array.isArray(t.comments) || t.comments.some((m: { id: unknown; author: unknown; text: unknown; createdAt: unknown }) => !id(m?.id) || !str(m.author) || !str(m.text) || !str(m.createdAt))) throw new Error('Invalid comment thread.');
+    }
   }
   const ideaIds = new Set<string>();
   for (const idea of p.ideas) {
     if (!id(idea.id) || ideaIds.has(idea.id) || !str(idea.title) || !str(idea.text) || !['Spark', 'Character', 'World', 'Question'].includes(idea.category) || (idea.chapterId !== null && !ids.has(idea.chapterId))) throw new Error('Invalid brainstorm card.');
     ideaIds.add(idea.id);
   }
+  if (p.font !== undefined && !str(p.font)) throw new Error('Invalid manuscript font.');
   if (p.sketches !== undefined) {
     if (!Array.isArray(p.sketches)) throw new Error('Invalid sketchbook.');
     const sketchIds = new Set<string>();

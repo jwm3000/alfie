@@ -44,6 +44,8 @@ Each manuscript lives in its own folder in your library (`Documents/Alfie` by de
 ## Small comforts for long writing days
 
 - **Chapters you can rearrange**: drag them in the sidebar; collapse the menu when you want to see more of them.
+- **Rich text, like Notion**: bold, italic, underline, strikethrough, highlight, headings, quotes, lists and scene breaks, from the toolbar, a small menu on selected text, or by typing Markdown (`**`, `*`, `## `, `> `, `- `). Six bundled manuscript fonts.
+- **Comments on every line**: hover a paragraph and click the bubble in the margin (or press Ctrl+Alt+M). Threads with replies, resolve and reopen; they follow their paragraph while you edit.
 - **A little spark**: 102 writing prompts in nine moods. Keep the ones you like in your brainstorm.
 - **Brainstorm board** for sparks, characters, places and questions, linked to chapters, plus a **sketchbook** tab for maps, faces and floor plans.
 - **Writing sprints**, per-chapter notes, a word count for every chapter and the whole book.
@@ -76,7 +78,7 @@ npm run desktop:build    # installers
 
 ## One honest, portable project
 
-An `.alfie` file is readable UTF-8 JSON with a versioned schema: the book, every chapter, all version branches, brainstorm cards, sketches and your goal. In the desktop app each chapter is also saved as its own Markdown file:
+Chapters are stored as a small Markdown dialect (`**bold**`, `*italic*`, `++underline++`, `~~strike~~`, `==highlight==`). An `.alfie` file is readable UTF-8 JSON with a versioned schema: the book, every chapter, all version branches, brainstorm cards, sketches, comments and your goal. In the desktop app each chapter is also saved as its own Markdown file:
 
 ```text
 Documents/Alfie/My story/

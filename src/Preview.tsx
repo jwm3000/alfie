@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, ChevronsLeft, ChevronsRight, Feather, PenLine } from 'lucide-react';
 import type { Chapter, Project } from './model';
+import { parseBlocks, parseInline, type Mark } from './rich';
 
 const RATIO = 0.68; // page width / height, close to a trade paperback
 const spelled = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty'];
@@ -25,28 +26,53 @@ const polyCss = (pts: V[], ox = 0, oy = 0) => (pts.length < 3 ? 'polygon(0 0, 0 
 const stripTransform = (q: V, n: V, half: number) => `translate(${q.x}px, ${q.y}px) rotate(${Math.atan2(n.y, n.x)}rad) translate(0px, ${-half}px)`;
 
 // ---- pagination: done in JS so every engine (Chromium, WebKitGTK, WebView2) lays out identical pages ----
-type Item = { t: 'header'; ci: number } | { t: 'p'; text: string; cls: string } | { t: 'break' } | { t: 'fin' } | { t: 'empty' };
+// A paragraph is a list of words (each made of formatted segments, e.g. **Mira**'s), so it can break across pages anywhere.
+type Seg = { t: string; m: Mark[] }; type Word = Seg[] | 'br';
+type Item = { t: 'header'; ci: number } | { t: 'p'; words: Word[]; cls: string } | { t: 'break' } | { t: 'fin' } | { t: 'empty' };
 type BookPage = { kind: 'title' } | { kind: 'toc'; from: number; to: number; heading: boolean } | { kind: 'text'; ci: number; items: Item[]; start: boolean };
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 function itemHtml(item: Item, chapters: Chapter[]) {
   switch (item.t) {
     case 'header': { const c = chapters[item.ci]; return `<header class="book-ch-head"><span>${chapterLabel(item.ci)}</span><h2>${esc(c.title)}</h2>${c.subtitle ? `<em>${esc(c.subtitle)}</em>` : ''}<i>❦</i></header>`; }
-    case 'p': return `<p class="${item.cls}">${esc(item.text).replace(/\n/g, '<br>')}</p>`;
+    case 'p': return `<p class="${item.cls}">${wordsHtml(item.words)}</p>`;
     case 'break': return '<div class="book-scene-break">⁂</div>';
     case 'fin': return '<div class="book-fin"><span>— fin —</span></div>';
     case 'empty': return '<p class="book-empty">This chapter is still waiting for its words.</p>';
   }
 }
+const TAGS: Record<Mark, [string, string]> = { bold: ['<strong>', '</strong>'], italic: ['<em>', '</em>'], underline: ['<u>', '</u>'], strike: ['<s>', '</s>'], highlight: ['<mark>', '</mark>'] };
+const wrap = (html: string, marks: Mark[]) => marks.map(k => TAGS[k][0]).join('') + html + [...marks].reverse().map(k => TAGS[k][1]).join('');
+function wordsHtml(words: Word[]) {
+  let html = '', prev: Seg | null = null;
+  for (const w of words) {
+    if (w === 'br') { html += '<br>'; prev = null; continue; }
+    // Underline, strike and highlight run on through the space between two marked words.
+    if (prev) html += wrap(' ', prev.m.filter(k => w[0].m.includes(k) && (k === 'underline' || k === 'strike' || k === 'highlight')));
+    html += w.map(seg => wrap(esc(seg.t), seg.m)).join(''); prev = w[w.length - 1];
+  }
+  return html;
+}
+function toWords(src: string, prefix = ''): Word[] {
+  const words: Word[] = prefix ? [[{ t: prefix, m: [] }]] : []; let cur: Seg[] = [];
+  const end = () => { if (cur.length) words.push(cur); cur = []; };
+  for (const r of parseInline(src)) for (const tok of r.text.split(/( |\n)/)) { if (tok === ' ') end(); else if (tok === '\n') { end(); words.push('br'); } else if (tok) cur.push({ t: tok, m: r.marks }); }
+  end();
+  return words;
+}
 const itemsHtml = (items: Item[], chapters: Chapter[]) => items.map(i => itemHtml(i, chapters)).join('');
 const tocHtml = (chapters: Chapter[], from: number, to: number, heading: boolean) => `<section class="book-contents">${heading ? '<h2>Contents</h2>' : ''}${chapters.slice(from, to).map((c, k) => `<button><span class="toc-num">${from + k + 1}</span><span class="toc-title">${esc(c.title)}</span><span class="toc-leader"></span><span class="toc-page">000</span></button>`).join('')}</section>`;
 function blocksOf(text: string): Item[] {
-  const blocks = text.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
-  if (!blocks.length) return [{ t: 'empty' }];
-  let first = true;
-  return blocks.map(b => {
-    if (/^(\*\s*){3,}$|^-{3,}$|^#$/.test(b)) { first = true; return { t: 'break' } as Item; }
-    const item: Item = { t: 'p', text: b, cls: first ? 'first' : '' }; first = false; return item;
-  });
+  const items: Item[] = []; let first = true;
+  const p = (words: Word[], cls: string) => { items.push({ t: 'p', words, cls: `${first ? 'first' : ''} ${cls}`.trim() }); first = false; };
+  for (const b of parseBlocks(text)) {
+    if (b.type === 'hr') { items.push({ t: 'break' }); first = true; }
+    else if (b.type === 'p') p(toWords(b.text), '');
+    else if (b.type === 'h') { p(toWords(b.text), `book-h${b.level}`); first = true; }
+    else if (b.type === 'quote') b.paras.forEach(q => p(toWords(q), 'book-quote'));
+    else if (b.type === 'ul') b.items.forEach(t => p(toWords(t, '•'), 'book-li'));
+    else b.items.forEach((t, i) => p(toWords(t, `${b.start + i}.`), 'book-li'));
+  }
+  return items.length ? items : [{ t: 'empty' }];
 }
 function paginate(box: HTMLDivElement, chapters: Chapter[], textH: number): BookPage[] {
   const fits = (html: string) => { box.innerHTML = html; return box.scrollHeight <= textH + .5; };
@@ -67,11 +93,11 @@ function paginate(box: HTMLDivElement, chapters: Chapter[], textH: number): Book
       if (fits(itemsHtml([...items, block], chapters))) { items.push(block); continue; }
       if (block.t === 'p') {
         // Split the paragraph word by word at the page end; the rest continues without indent.
-        const words = block.text.split(' ');
+        const words = block.words;
         let lo = 0, hi = words.length - 1;
-        while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if (fits(itemsHtml([...items, { ...block, text: words.slice(0, mid).join(' '), cls: `${block.cls} split` }], chapters))) lo = mid; else hi = mid - 1; }
+        while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if (fits(itemsHtml([...items, { ...block, words: words.slice(0, mid), cls: `${block.cls} split` }], chapters))) lo = mid; else hi = mid - 1; }
         if (lo === 0 && !items.length) lo = 1; // a single word that never fits still has to go somewhere
-        if (lo > 0) { items.push({ ...block, text: words.slice(0, lo).join(' '), cls: `${block.cls} split` }); queue.unshift({ t: 'p', text: words.slice(lo).join(' '), cls: 'cont' }); }
+        if (lo > 0) { items.push({ ...block, words: words.slice(0, lo), cls: `${block.cls} split` }); queue.unshift({ t: 'p', words: words.slice(lo), cls: `cont ${block.cls.replace(/\b(first|split)\b/g, '').trim()}`.trim() }); }
         else queue.unshift(block);
         flush();
       } else if (!items.length) { items.push(block); flush(); }

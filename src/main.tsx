@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './style.css';
+import './fonts';
 import { newProject, newChapter, serialize } from './model';
 import { CACHE_KEY } from './bridge';
 // `?bigdemo`: a 60k-word manuscript for performance testing (only in a throwaway browser profile).
