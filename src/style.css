@@ -338,3 +338,9 @@
 .page-scroll{background:var(--paper);overscroll-behavior:contain;animation-fill-mode:backwards}
 .view-scroll{animation-fill-mode:backwards}
 .page-scroll,.view-scroll,.companion,.sidebar,.chapter-list,.graph-scroll,.thread-scroll{overscroll-behavior:contain}
+/* The editor's paragraphs follow the chosen writing size, not the interface's paragraph style. */
+.manuscript-editor p,.manuscript-editor li,.manuscript-editor blockquote{font-size:inherit;line-height:inherit;color:inherit}
+/* Comments never scroll sideways: long words wrap, and WebKit gets no horizontal scrollbar to draw. */
+.thread-pop,.thread-scroll,.companion{overflow-x:hidden}
+.compose-box textarea{overflow-x:hidden;white-space:pre-wrap;overflow-wrap:anywhere;box-sizing:border-box}
+.comment-item span,.comment-item q{overflow-wrap:anywhere}
