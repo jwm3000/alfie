@@ -330,3 +330,11 @@
 .book-text p.book-h2::first-letter,.book-text p.book-h3::first-letter,.book-text p.book-li::first-letter,.book-text p.book-quote::first-letter{float:none;font-size:inherit;color:inherit;padding:0;line-height:inherit}
 .book-text p.book-quote{text-indent:0;margin:.3em 1.4em;font-style:italic;text-align:left}
 .book-text p.book-li{text-indent:-1.1em;padding-left:1.6em;text-align:left}
+
+/* ---- scrolling: smooth on every engine ----
+   An opaque scroller with nothing painted on top lets Chromium (WebView2 on Windows) move the page on the
+   compositor instead of repainting the text in every frame. Scroll chaining and the leftover entrance
+   transform are dropped so the scroller stays a plain, cheap layer. */
+.page-scroll{background:var(--paper);overscroll-behavior:contain;animation-fill-mode:backwards}
+.view-scroll{animation-fill-mode:backwards}
+.page-scroll,.view-scroll,.companion,.sidebar,.chapter-list,.graph-scroll,.thread-scroll{overscroll-behavior:contain}

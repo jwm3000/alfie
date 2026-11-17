@@ -15,6 +15,8 @@ import { mdToDoc } from './rich';
 import { Comments, blockAt, commentState, commentsKey } from './comments';
 import { uid, type Thread } from './model';
 
+type Move = { target: EventTarget | null; clientX: number; clientY: number };
+
 export const FONTS = [
   { id: 'georgia', name: 'Georgia', note: 'Classic and familiar', family: "Georgia, 'Times New Roman', serif", scale: 1 },
   { id: 'literata', name: 'Literata', note: 'Made for long reading', family: "'Literata', Georgia, serif", scale: .96 },
@@ -128,7 +130,20 @@ export default function RichEditor(p: Props) {
   };
 
   // Hover a line → a "comment" button appears in the margin next to it.
-  const onMove = (e: React.MouseEvent) => {
+  // Scrolling makes the browser send mouse moves too; looking up the line under the pointer then would cost
+  // work in every scroll frame. Skip them while the page moves and look at most once per frame otherwise.
+  const scrolledAt = useRef(0), moveFrame = useRef(0), lastMove = useRef<Move | null>(null), moveRef = useRef<(m: Move) => void>(() => {});
+  useEffect(() => {
+    const mark = () => { scrolledAt.current = performance.now(); };
+    window.addEventListener('scroll', mark, { capture: true, passive: true });
+    return () => { window.removeEventListener('scroll', mark, true); cancelAnimationFrame(moveFrame.current); };
+  }, []);
+  const queueMove = (e: React.MouseEvent) => {
+    if (performance.now() - scrolledAt.current < 160) return;
+    lastMove.current = { target: e.target, clientX: e.clientX, clientY: e.clientY };
+    if (!moveFrame.current) moveFrame.current = requestAnimationFrame(() => { moveFrame.current = 0; if (lastMove.current) moveRef.current(lastMove.current); });
+  };
+  const onMove = (e: Move) => {
     if (!editor || open || !p.showComments) return;
     const view = editor.view, eb = view.dom.getBoundingClientRect();
     if ((e.target as HTMLElement).closest('.comment-add,.comment-marker')) return;
@@ -138,11 +153,12 @@ export default function RichEditor(p: Props) {
     if (!b || !b.text.trim()) { if (hover) setHover(null); return; }
     if (hover?.pos !== b.pos) setHover({ pos: b.pos, top: blockTop(b.pos) });
   };
+  moveRef.current = onMove;
 
   // Leaving the text towards the margin must not hide the button: the margin strip belongs to the hover area,
   // and a short grace period covers quick or diagonal mouse moves.
   const leaveTimer = useRef(0);
-  return <div ref={host} className={`rich-host ${p.showComments ? '' : 'no-comments'}`} onMouseMove={e => { clearTimeout(leaveTimer.current); onMove(e); }} onMouseLeave={() => { clearTimeout(leaveTimer.current); leaveTimer.current = window.setTimeout(() => setHover(null), 350); }}>
+  return <div ref={host} className={`rich-host ${p.showComments ? '' : 'no-comments'}`} onMouseMove={e => { clearTimeout(leaveTimer.current); queueMove(e); }} onMouseLeave={() => { clearTimeout(leaveTimer.current); leaveTimer.current = window.setTimeout(() => setHover(null), 350); }}>
     <EditorContent editor={editor}/>
     <div ref={caret} className="soft-caret" aria-hidden="true" style={{ display: 'none' }}/>
     {editor && <BubbleMenu editor={editor} className="bubble" options={{ placement: 'top', offset: 8 }}>
